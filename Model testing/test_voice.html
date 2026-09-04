@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Voice Endpoint Test</title>
+<style>
+  body { font-family: monospace; background: #1a1a2e; color: #eee; padding: 30px; max-width: 700px; margin: auto; }
+  button { padding: 12px 24px; font-size: 16px; cursor: pointer; border: none; border-radius: 6px; margin: 5px; }
+  #rec-btn { background: #e74c3c; color: white; }
+  #rec-btn.recording { background: #2ecc71; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: 0.6; } }
+  .log { background: #16213e; padding: 12px; border-radius: 6px; margin: 8px 0; font-size: 13px; white-space: pre-wrap; }
+  .log.ok { border-left: 3px solid #2ecc71; }
+  .log.err { border-left: 3px solid #e74c3c; }
+  .log.info { border-left: 3px solid #3498db; }
+  h2 { color: #8be9fd; margin-top: 24px; }
+  select, input { padding: 8px; border-radius: 4px; border: 1px solid #444; background: #16213e; color: #eee; margin: 4px; }
+</style>
+</head>
+<body>
+
+<h1>MediKiosk — Voice Backend Test</h1>
+
+<div>
+  <label>Patient Name: <input type="text" id="name" value="Test Patient"></label>
+  <label>Language: 
+    <select id="lang">
+      <option value="en">English</option>
+      <option value="hi">Hindi</option>
+      <option value="ta">Tamil</option>
+      <option value="te">Telugu</option>
+      <option value="kn">Kannada</option>
+      <option value="ml">Malayalam</option>
+      <option value="mr">Marathi</option>
+      <option value="bn">Bengali</option>
+      <option value="gu">Gujarati</option>
+    </select>
+  </label>
+</div>
+
+<h2>Test 1: Transcribe Only (POST /transcribe)</h2>
+<p>Records audio → sends to /transcribe → shows text</p>
+<button id="rec-btn" onclick="toggleRecord('transcribe')">🎤 Hold to Record</button>
+<div id="transcribe-log"></div>
+
+<h2>Test 2: Voice Interview (POST /interview/voice — Full Two-Way Voice)</h2>
+<p>AI speaks question → You speak answer → AI asks adaptive follow-up out loud!</p>
+<button onclick="playGreeting()" style="background:#8e44ad;color:white;">🔊 Step 1: AI Asks First Question</button>
+<button id="rec-btn2" onclick="toggleRecord('interview')">🎤 Step 2: Speak Your Answer</button>
+<div id="interview-log"></div>
+
+<h2>Test 3: Direct TTS Tester (GET /tts & POST /tts)</h2>
+<p>Test the AI's Indian neural voice output directly:</p>
+<input type="text" id="tts-input" value="Hello, how can I help you today?" style="width: 65%;">
+<button onclick="testTTS()" style="background:#27ae60;color:white;">🔊 Speak</button>
+<div id="tts-log"></div>
+
+<h2>Conversation History</h2>
+<div id="history-log"></div>
+<button onclick="resetHistory()" style="background:#555;color:#eee;">Reset History</button>
+
+<script>
+const API = "http://127.0.0.1:8001";
+let mediaRecorder = null;
+let chunks = [];
+let recording = false;
+let currentMode = null;
+let history = [];
+
+function log(target, msg, type = "info") {
+  const div = document.createElement("div");
+  div.className = `log ${type}`;
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  document.getElementById(target).prepend(div);
+}
+
+async function toggleRecord(mode) {
+  if (recording) {
+    stopRecording();
+    return;
+  }
+  currentMode = mode;
+  const btn = mode === "transcribe" ? document.getElementById("rec-btn") : document.getElementById("rec-btn2");
+  
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+    chunks = [];
+
+    mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(chunks, { type: "audio/webm" });
+      const logTarget = mode === "transcribe" ? "transcribe-log" : "interview-log";
+      log(logTarget, `Audio recorded: ${(blob.size / 1024).toFixed(1)} KB`, "info");
+      
+      if (mode === "transcribe") {
+        await testTranscribe(blob);
+      } else {
+        await testVoiceInterview(blob);
+      }
+    };
+
+    mediaRecorder.start();
+    recording = true;
+    btn.textContent = "⏹ Stop Recording";
+    btn.classList.add("recording");
+    log(mode === "transcribe" ? "transcribe-log" : "interview-log", "Recording... speak now", "info");
+  } catch (err) {
+    log(mode === "transcribe" ? "transcribe-log" : "interview-log", `Mic error: ${err.message}`, "err");
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
+  }
+  recording = false;
+  const btn = currentMode === "transcribe" ? document.getElementById("rec-btn") : document.getElementById("rec-btn2");
+  btn.textContent = "🎤 Hold to Record";
+  btn.classList.remove("recording");
+}
+
+async function testTranscribe(blob) {
+  const target = "transcribe-log";
+  log(target, "Sending to POST /transcribe ...", "info");
+  
+  const form = new FormData();
+  form.append("audio", blob, "speech.webm");
+  form.append("language", document.getElementById("lang").value);
+
+  try {
+    const r = await fetch(`${API}/transcribe`, { method: "POST", body: form });
+    const data = await r.json();
+    if (data.error) {
+      log(target, `ERROR: ${data.error}`, "err");
+    } else {
+      log(target, `TRANSCRIBED: "${data.text}"`, "ok");
+    }
+  } catch (e) {
+    log(target, `FETCH ERROR: ${e.message}`, "err");
+  }
+}
+
+async function testVoiceInterview(blob) {
+  const target = "interview-log";
+  const name = document.getElementById("name").value || "Unknown";
+  const lang = document.getElementById("lang").value;
+  
+  log(target, "Sending to POST /interview/voice ...", "info");
+
+  const form = new FormData();
+  form.append("audio", blob, "speech.webm");
+  form.append("history", JSON.stringify(history));
+  form.append("patient_name", name);
+  form.append("language", lang);
+
+  try {
+    const r = await fetch(`${API}/interview/voice`, { method: "POST", body: form });
+    const data = await r.json();
+    
+    if (data.transcribed_text) {
+      log(target, `TRANSCRIBED: "${data.transcribed_text}"`, "info");
+    }
+    log(target, `AI REPLY: "${data.reply}"`, "ok");
+
+    // Play AI question out loud!
+    if (data.audio_base64) {
+      log(target, "🔊 AI is asking question aloud...", "info");
+      playAudio(data.audio_base64, data.reply);
+    } else {
+      speakFallback(data.reply);
+    }
+
+    const userText = data.transcribed_text || "(voice audio)";
+    history.push({ role: "user", content: userText });
+    history.push({ role: "assistant", content: data.reply });
+    updateHistoryDisplay();
+
+    if (data.is_complete) {
+      log(target, `SUMMARY GENERATED! ID: ${data.summary_id}`, "ok");
+      log(target, data.summary_text, "ok");
+    }
+
+    if (data.reply.startsWith("RED_FLAG:")) {
+      log(target, `RED FLAG TRIGGERED!`, "err");
+    }
+  } catch (e) {
+    log(target, `FETCH ERROR: ${e.message}`, "err");
+  }
+}
+
+function playAudio(audioBase64, fallbackText) {
+  if (audioBase64) {
+    const audio = new Audio("data:audio/mpeg;base64," + audioBase64);
+    audio.play().catch(e => {
+      console.warn("Autoplay blocked, using speech synthesis fallback:", e);
+      speakFallback(fallbackText);
+    });
+  } else if (fallbackText) {
+    speakFallback(fallbackText);
+  }
+}
+
+function speakFallback(text) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    const lang = document.getElementById("lang").value || "en";
+    utter.lang = lang === "hi" ? "hi-IN" : "en-IN";
+    window.speechSynthesis.speak(utter);
+  }
+}
+
+async function playGreeting() {
+  const lang = document.getElementById("lang").value || "en";
+  const text = "Hello! Welcome to MediKiosk. Before we begin, which language would you prefer to communicate in? For example: English, Hindi, Tamil, Telugu, Kannada, Malayalam, Marathi, Bengali, or Gujarati.";
+  log("interview-log", `AI: "${text}"`, "ok");
+  log("interview-log", "🔊 AI asking language preference...", "info");
+
+  try {
+    const r = await fetch(`${API}/tts?text=${encodeURIComponent(text)}&language=${lang}`);
+    if (r.ok) {
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      await audio.play();
+      history = [{ role: "assistant", content: text }];
+      updateHistoryDisplay();
+      return;
+    }
+  } catch (e) {
+    console.warn("Backend TTS error, falling back to Web Speech:", e);
+  }
+
+  speakFallback(text);
+  history = [{ role: "assistant", content: text }];
+  updateHistoryDisplay();
+}
+
+async function testTTS() {
+  const text = document.getElementById("tts-input").value.trim();
+  const lang = document.getElementById("lang").value || "en";
+  if (!text) return;
+
+  log("tts-log", `Speaking: "${text}" in language "${lang}"...`, "info");
+  try {
+    const r = await fetch(`${API}/tts?text=${encodeURIComponent(text)}&language=${lang}`);
+    if (r.ok) {
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      await audio.play();
+      log("tts-log", "Audio played successfully via Edge Neural TTS", "ok");
+      return;
+    }
+  } catch (e) {
+    log("tts-log", `TTS error: ${e.message}, falling back to Web Speech`, "err");
+  }
+
+  speakFallback(text);
+  log("tts-log", "Played via browser SpeechSynthesis fallback", "info");
+}
+
+function updateHistoryDisplay() {
+  const el = document.getElementById("history-log");
+  el.innerHTML = "";
+  history.forEach((m, i) => {
+    const div = document.createElement("div");
+    div.className = "log info";
+    div.textContent = `${m.role}: ${m.content}`;
+    el.appendChild(div);
+  });
+}
+
+function resetHistory() {
+  history = [];
+  document.getElementById("history-log").innerHTML = "";
+  log("interview-log", "History cleared — starting fresh", "info");
+}
+</script>
+</body>
+</html>

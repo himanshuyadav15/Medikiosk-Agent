@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>MediKiosk — Live Voice (Gemini)</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #F5FBFA; text-align: center; padding: 30px; }
+  h1 { color: #1F2A5E; font-size: 22px; }
+  #start-btn {
+    width: 160px; height: 160px; border-radius: 50%;
+    background: #1F2A5E; color: white; font-size: 18px; border: none; cursor: pointer;
+  }
+  #start-btn.active { background: #C0392B; }
+  #status { margin-top: 20px; font-size: 16px; color: #555; }
+  #summary-box, #redflag-box {
+    display: none; margin: 20px auto; max-width: 600px; padding: 20px;
+    border-radius: 12px; text-align: left; white-space: pre-wrap;
+  }
+  #summary-box { background: #EAF6F4; border: 2px solid #00A896; }
+  #redflag-box { background: #FDECEA; border: 3px solid #C0392B; font-weight: bold; color: #C0392B; }
+</style>
+</head>
+<body>
+
+<h1>MediKiosk — Live Voice (Gemini)</h1>
+<button id="start-btn">Tap to start talking</button>
+<div id="status">Not connected</div>
+<div id="summary-box"></div>
+<div id="redflag-box"></div>
+
+<script>
+// Change this if your backend runs somewhere other than localhost:8000
+const WS_URL = "ws://127.0.0.1:8000/ws/interview";
+
+const startBtn = document.getElementById("start-btn");
+const statusEl = document.getElementById("status");
+const summaryBox = document.getElementById("summary-box");
+const redflagBox = document.getElementById("redflag-box");
+
+let ws;
+let micContext, micStream, processorNode;
+let playbackContext, playbackQueueTime = 0;
+let sessionActive = false;
+
+startBtn.onclick = () => {
+  if (!sessionActive) startSession();
+  else stopSession();
+};
+
+async function startSession() {
+  ws = new WebSocket(WS_URL);
+  ws.binaryType = "arraybuffer";
+
+  ws.onopen = async () => {
+    statusEl.textContent = "Connected — AI will ask your preferred language first";
+    startBtn.classList.add("active");
+    startBtn.textContent = "Tap to stop";
+    sessionActive = true;
+    await startMicStreaming();
+  };
+
+  // Messages from the server: either raw audio bytes (play them)
+  // or a JSON control message (summary / red flag)
+  ws.onmessage = (event) => {
+    if (typeof event.data === "string") {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "summary") {
+        summaryBox.style.display = "block";
+        summaryBox.textContent = msg.text;
+        statusEl.textContent = "Interview complete";
+      } else if (msg.type === "red_flag") {
+        redflagBox.style.display = "block";
+        redflagBox.textContent = "\u26A0 " + msg.text;
+        statusEl.textContent = "Urgent — staff notified";
+      }
+    } else {
+      playAudioChunk(event.data);
+    }
+  };
+
+  ws.onclose = () => {
+    statusEl.textContent = "Disconnected";
+    stopSession();
+  };
+  ws.onerror = () => {
+    statusEl.textContent = "Connection error — check the server is running";
+  };
+}
+
+function stopSession() {
+  sessionActive = false;
+  startBtn.classList.remove("active");
+  startBtn.textContent = "Tap to start talking";
+  if (processorNode) processorNode.disconnect();
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+}
+
+// ---- Capture mic audio, downsample to 16kHz 16-bit PCM, stream to server ----
+async function startMicStreaming() {
+  micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  micContext = new AudioContext(); // native rate, usually 44100 or 48000 Hz
+  const source = micContext.createMediaStreamSource(micStream);
+
+  // ScriptProcessorNode is deprecated but far simpler to explain than AudioWorklet.
+  // Fine for a hackathon demo; swap to AudioWorklet later if you productionize this.
+  processorNode = micContext.createScriptProcessor(4096, 1, 1);
+  source.connect(processorNode);
+  processorNode.connect(micContext.destination);
+
+  processorNode.onaudioprocess = (e) => {
+    if (!sessionActive || ws.readyState !== WebSocket.OPEN) return;
+    const inputSamples = e.inputBuffer.getChannelData(0); // Float32 @ native rate
+    const downsampled = downsampleTo16kHz(inputSamples, micContext.sampleRate, 16000);
+    const pcm16 = floatTo16BitPCM(downsampled);
+    ws.send(pcm16);
+  };
+}
+
+function downsampleTo16kHz(buffer, inputRate, outputRate) {
+  if (outputRate === inputRate) return buffer;
+  const ratio = inputRate / outputRate;
+  const newLength = Math.round(buffer.length / ratio);
+  const result = new Float32Array(newLength);
+  for (let i = 0; i < newLength; i++) {
+    result[i] = buffer[Math.floor(i * ratio)];
+  }
+  return result;
+}
+
+function floatTo16BitPCM(floatSamples) {
+  const buffer = new ArrayBuffer(floatSamples.length * 2);
+  const view = new DataView(buffer);
+  for (let i = 0; i < floatSamples.length; i++) {
+    const s = Math.max(-1, Math.min(1, floatSamples[i]));
+    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true); // little-endian
+  }
+  return buffer;
+}
+
+// ---- Play back audio chunks received from Gemini (24kHz 16-bit PCM) ----
+function playAudioChunk(arrayBuffer) {
+  if (!playbackContext) {
+    playbackContext = new AudioContext({ sampleRate: 24000 });
+    playbackQueueTime = playbackContext.currentTime;
+  }
+  const int16 = new Int16Array(arrayBuffer);
+  const float32 = new Float32Array(int16.length);
+  for (let i = 0; i < int16.length; i++) {
+    float32[i] = int16[i] / 32768;
+  }
+  const audioBuffer = playbackContext.createBuffer(1, float32.length, 24000);
+  audioBuffer.copyToChannel(float32, 0);
+
+  const source = playbackContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(playbackContext.destination);
+
+  // Queue chunks back-to-back so playback doesn't overlap or gap
+  const startTime = Math.max(playbackQueueTime, playbackContext.currentTime);
+  source.start(startTime);
+  playbackQueueTime = startTime + audioBuffer.duration;
+}
+</script>
+
+</body>
+</html>

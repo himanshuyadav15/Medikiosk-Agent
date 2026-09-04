@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MediKiosk — Live Interview Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Welcome Screen ────────────────────────────── */
+  #welcome-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    width: 100%;
+    padding: 40px 24px;
+    text-align: center;
+    animation: fadeIn 0.8s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+  }
+
+  .welcome-logo {
+    width: 180px;
+    height: auto;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 4px 20px rgba(99, 102, 241, 0.3));
+    animation: logoFloat 3s ease-in-out infinite;
+  }
+
+  @keyframes logoFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .welcome-tagline {
+    font-size: 18px;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-bottom: 36px;
+    letter-spacing: 0.5px;
+  }
+
+  .welcome-features {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 36px;
+    max-width: 600px;
+  }
+
+  .welcome-feature {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    transition: transform 0.2s, border-color 0.3s;
+  }
+
+  .welcome-feature:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.4);
+  }
+
+  .feature-icon {
+    font-size: 22px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(99, 102, 241, 0.15);
+    flex-shrink: 0;
+  }
+
+  .feature-text {
+    text-align: left;
+  }
+
+  .feature-text strong {
+    display: block;
+    font-size: 13px;
+    color: #c7d2fe;
+    margin-bottom: 2px;
+  }
+
+  .feature-text span {
+    font-size: 11px;
+    color: #64748b;
+  }
+
+  .consent-box {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 14px;
+    padding: 20px 28px;
+    max-width: 480px;
+    margin-bottom: 28px;
+    backdrop-filter: blur(8px);
+  }
+
+  .consent-box label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  .consent-box input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: #6366f1;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  #proceed-btn {
+    padding: 14px 48px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.3s, opacity 0.3s;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+  }
+
+  #proceed-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(99, 102, 241, 0.5);
+  }
+
+  #proceed-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .welcome-footer {
+    margin-top: 32px;
+    font-size: 11px;
+    color: #475569;
+  }
+
+  /* ── Header ────────────────────────────────────── */
+  .header {
+    display: none;
+    padding: 24px 32px;
+    text-align: center;
+    width: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+  }
+
+  .header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+  }
+
+  .header p {
+    font-size: 13px;
+    color: #94a3b8;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #22c55e;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .container {
+    width: 100%;
+    max-width: 700px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  /* Patient name input area */
+  #name-section {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 16px;
+    padding: 32px;
+    margin: 20px 0;
+    text-align: center;
+    backdrop-filter: blur(10px);
+  }
+
+  #name-section h2 {
+    font-size: 18px;
+    color: #c7d2fe;
+    margin-bottom: 16px;
+  }
+
+  #name-input {
+    width: 100%;
+    max-width: 300px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    background: rgba(15, 23, 42, 0.6);
+    color: #e2e8f0;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  #name-input:focus { border-color: #818cf8; }
+
+  #start-btn {
+    margin-top: 16px;
+    padding: 12px 32px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  #start-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  }
+
+  /* ── Mode Toggle ───────────────────────────────── */
+  .mode-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .mode-toggle-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    transition: color 0.3s;
+  }
+
+  .mode-toggle-label.active {
+    color: #e2e8f0;
+  }
+
+  .mode-toggle {
+    position: relative;
+    width: 56px;
+    height: 30px;
+    cursor: pointer;
+  }
+
+  .mode-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 15px;
+    background: rgba(99, 102, 241, 0.3);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  }
+
+  .mode-toggle input:checked ~ .toggle-track {
+    background: rgba(16, 185, 129, 0.3);
+    border-color: rgba(16, 185, 129, 0.5);
+  }
+
+  .mode-toggle input:checked ~ .toggle-thumb {
+    transform: translateX(26px);
+    background: linear-gradient(135deg, #10b981, #34d399);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
+  }
+
+  .mode-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-top: 4px;
+    transition: all 0.3s;
+  }
+
+  .mode-badge.text-mode {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+  }
+
+  .mode-badge.voice-mode {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  /* ── Chat area ─────────────────────────────────── */
+  #chat-section { display: none; flex: 1; flex-direction: column; }
+
+  .chat-box {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .msg {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.ai {
+    align-self: flex-start;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    color: #c7d2fe;
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: white;
+  }
+
+  .msg.system {
+    align-self: center;
+    background: rgba(234, 179, 8, 0.15);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    color: #fbbf24;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .msg-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    opacity: 0.6;
+  }
+
+  /* ── Text input area ───────────────────────────── */
+  .input-area {
+    display: flex;
+    gap: 8px;
+    padding: 12px 0;
+  }
+
+  #user-input {
+    flex: 1;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: rgba(15, 23, 42, 0.8);
+    color: #e2e8f0;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  #user-input:focus { border-color: #818cf8; }
+  #user-input:disabled { opacity: 0.5; }
+
+  #send-btn {
+    padding: 14px 24px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.2s;
+  }
+
+  #send-btn:hover { transform: scale(1.03); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Voice mic area ────────────────────────────── */
+  #voice-area {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 0;
+  }
+
+  #mic-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    font-size: 32px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.3s, background 0.3s;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+    position: relative;
+  }
+
+  #mic-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 30px rgba(16, 185, 129, 0.5);
+  }
+
+  #mic-btn.listening {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+    animation: mic-pulse 1.5s infinite;
+  }
+
+  @keyframes mic-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+    70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  }
+
+  #voice-status {
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+  }
+
+  #voice-status.active {
+    color: #6ee7b7;
+  }
+
+  /* ── Typing indicator ──────────────────────────── */
+  .typing-indicator {
+    display: none;
+    align-self: flex-start;
+    padding: 12px 20px;
+    border-radius: 14px;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+  }
+
+  .typing-indicator span {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #818cf8;
+    margin: 0 2px;
+    animation: bounce 1.4s infinite;
+  }
+
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-8px); }
+  }
+
+  /* Summary card */
+  .summary-card {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 12px;
+    animation: slideIn 0.5s ease;
+  }
+
+  .summary-card h3 {
+    font-size: 16px;
+    color: #4ade80;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .summary-card pre {
+    font-family: 'Inter', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #cbd5e1;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background: rgba(30, 41, 59, 0.6);
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(51, 65, 85, 0.5);
+  }
+
+  .summary-meta {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    gap: 16px;
+  }
+
+  .summary-meta span { display: flex; align-items: center; gap: 4px; }
+
+  /* Red flag card */
+  .redflag-card {
+    background: rgba(127, 29, 29, 0.3);
+    border: 2px solid rgba(239, 68, 68, 0.5);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 12px;
+    color: #fca5a5;
+    animation: slideIn 0.5s ease;
+  }
+
+  .turn-counter {
+    font-size: 11px;
+    color: #64748b;
+    text-align: center;
+    padding: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ Welcome / Branding Screen ═══ -->
+<div id="welcome-screen">
+  <img src="medikiosk_logo.png" alt="MediKiosk Logo" class="welcome-logo" />
+  <p class="welcome-tagline">Simplifying Patient Care with AI</p>
+
+  <div class="welcome-features">
+    <div class="welcome-feature">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-text">
+        <strong>AI Interview</strong>
+        <span>Smart clinical history taking</span>
+      </div>
+    </div>
+    <div class="welcome-feature">
+      <div class="feature-icon">🎤</div>
+      <div class="feature-text">
+        <strong>Voice Support</strong>
+        <span>Speak in your language</span>
+      </div>
+    </div>
+    <div class="welcome-feature">
+      <div class="feature-icon">🌐</div>
+      <div class="feature-text">
+        <strong>Multilingual</strong>
+        <span>9+ Indian languages</span>
+      </div>
+    </div>
+    <div class="welcome-feature">
+      <div class="feature-icon">🚨</div>
+      <div class="feature-text">
+        <strong>Emergency Alerts</strong>
+        <span>Instant red-flag detection</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="consent-box">
+    <label>
+      <input type="checkbox" id="consent-check" onchange="document.getElementById('proceed-btn').disabled = !this.checked" />
+      <span>Your information will only be used for medical purposes and shared with your doctor. By proceeding, you agree to this.</span>
+    </label>
+  </div>
+
+  <button id="proceed-btn" disabled onclick="showNameSection()">Get Started →</button>
+
+  <div class="welcome-footer">MediKiosk &copy; 2026 — Smarter Intakes. Better Care.</div>
+</div>
+
+<!-- ═══ Main App (hidden until welcome is dismissed) ═══ -->
+<div class="header" id="app-header">
+  <h1>MediKiosk Interview Engine</h1>
+  <p>AI-Powered Clinical History Taking</p>
+  <div class="status-bar">
+    <div class="status-dot"></div>
+    <span id="header-status" style="color: #4ade80;">Server connected (port 8000)</span>
+  </div>
+</div>
+
+<div class="container" id="app-container" style="display:none;">
+  <!-- Step 1: Patient name -->
+  <div id="name-section">
+    <h2>Enter Patient Name to Begin</h2>
+    <input type="text" id="name-input" placeholder="e.g. Rahul Sharma" />
+    <br/>
+    <button id="start-btn" onclick="startInterview()">Start Interview</button>
+  </div>
+
+  <!-- Step 2: Chat -->
+  <div id="chat-section">
+    <!-- Mode toggle -->
+    <div class="mode-toggle-wrapper">
+      <span class="mode-toggle-label active" id="label-text">⌨️ Text</span>
+      <label class="mode-toggle">
+        <input type="checkbox" id="mode-switch" onchange="switchMode()" />
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+      <span class="mode-toggle-label" id="label-voice">🎤 Voice</span>
+    </div>
+    <div style="text-align:center;">
+      <span class="mode-badge text-mode" id="mode-badge">⌨️ Text Mode — type your answers</span>
+    </div>
+
+    <div class="chat-box" id="chat-box"></div>
+    <div class="typing-indicator" id="typing">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="turn-counter" id="turn-counter"></div>
+
+    <!-- Text input (shown in text mode) -->
+    <div class="input-area" id="text-input-area">
+      <input type="text" id="user-input" placeholder="Type your answer..." onkeydown="if(event.key==='Enter')sendMessage()" />
+      <button id="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+
+    <!-- Voice mic (shown in voice mode) -->
+    <div id="voice-area">
+      <button id="mic-btn" onclick="toggleMic()">🎤</button>
+      <div id="voice-status">Tap the mic to start speaking</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+const WS_URL = "ws://127.0.0.1:8000/ws/interview";
+
+let history = [];
+let patientName = "";
+let turnCount = 0;
+let currentMode = "text"; // "text" or "voice"
+
+// ── Voice mode state ──────────────────────────────────
+let ws = null;
+let micContext, micStream, processorNode;
+let playbackContext, playbackQueueTime = 0;
+let voiceSessionActive = false;
+
+// ═══════════════════════════════════════════════════════
+//  START INTERVIEW
+// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  WELCOME SCREEN → NAME SECTION
+// ═══════════════════════════════════════════════════════
+function showNameSection() {
+  const welcome = document.getElementById("welcome-screen");
+  welcome.style.animation = "fadeOut 0.4s ease forwards";
+  setTimeout(() => {
+    welcome.style.display = "none";
+    document.getElementById("app-header").style.display = "block";
+    document.getElementById("app-container").style.display = "flex";
+    document.getElementById("name-input").focus();
+  }, 400);
+}
+
+function startInterview() {
+  patientName = document.getElementById("name-input").value.trim() || "Unknown";
+  document.getElementById("name-section").style.display = "none";
+  document.getElementById("chat-section").style.display = "flex";
+  
+  addMessage("system", `Interview started for patient: ${patientName}`);
+  const greeting = "Hello! Welcome to MediKiosk. Before we begin, which language would you prefer to communicate in? For example: English, Hindi, Tamil, Telugu, Kannada, Malayalam, Marathi, Bengali, or Gujarati.";
+  addMessage("ai", greeting);
+  document.getElementById("user-input").focus();
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODE SWITCHING
+// ═══════════════════════════════════════════════════════
+function switchMode() {
+  const isVoice = document.getElementById("mode-switch").checked;
+  const badge = document.getElementById("mode-badge");
+  const labelText = document.getElementById("label-text");
+  const labelVoice = document.getElementById("label-voice");
+
+  if (isVoice) {
+    currentMode = "voice";
+    document.getElementById("text-input-area").style.display = "none";
+    document.getElementById("voice-area").style.display = "flex";
+    badge.className = "mode-badge voice-mode";
+    badge.textContent = "🎤 Voice Mode — speak your answers";
+    labelText.classList.remove("active");
+    labelVoice.classList.add("active");
+    addMessage("system", "Switched to Voice Mode — tap the mic and speak");
+  } else {
+    // Disconnect voice if active
+    if (voiceSessionActive) stopVoiceSession();
+    currentMode = "text";
+    document.getElementById("text-input-area").style.display = "flex";
+    document.getElementById("voice-area").style.display = "none";
+    badge.className = "mode-badge text-mode";
+    badge.textContent = "⌨️ Text Mode — type your answers";
+    labelText.classList.add("active");
+    labelVoice.classList.remove("active");
+    addMessage("system", "Switched to Text Mode — type your answers");
+    document.getElementById("user-input").focus();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SHARED: Add chat message to the UI
+// ═══════════════════════════════════════════════════════
+function addMessage(type, text) {
+  const box = document.getElementById("chat-box");
+  const div = document.createElement("div");
+  div.className = `msg ${type}`;
+  
+  const label = document.createElement("div");
+  label.className = "msg-label";
+  label.textContent = type === "ai" ? "MediKiosk AI" : type === "user" ? "Patient" : "System";
+  
+  const content = document.createElement("div");
+  content.textContent = text;
+  
+  div.appendChild(label);
+  div.appendChild(content);
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TEXT MODE: Send message via REST API
+// ═══════════════════════════════════════════════════════
+async function sendMessage() {
+  const input = document.getElementById("user-input");
+  const sendBtn = document.getElementById("send-btn");
+  const answer = input.value.trim();
+  if (!answer) return;
+
+  addMessage("user", answer);
+  input.value = "";
+  input.disabled = true;
+  sendBtn.disabled = true;
+
+  document.getElementById("typing").style.display = "block";
+
+  turnCount++;
+  document.getElementById("turn-counter").textContent = `Turn ${turnCount}`;
+
+  try {
+    const resp = await fetch(`${API}/interview?patient_name=${encodeURIComponent(patientName)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ history, latest_answer: answer, speak: false }),
+    });
+
+    const data = await resp.json();
+    document.getElementById("typing").style.display = "none";
+
+    history.push({ role: "user", content: answer });
+    history.push({ role: "assistant", content: data.reply });
+
+    if (data.reply.startsWith("RED_FLAG:")) {
+      const reason = data.reply.replace("RED_FLAG:", "").trim();
+      showRedFlag(reason);
+      return;
+    }
+
+    if (data.is_complete) {
+      const doneMsg = "Thank you! I've collected all the information needed.";
+      addMessage("ai", doneMsg);
+      showSummary(data.summary_text, data.summary_id, data.summary_json);
+      await testRetrievalEndpoints(data.summary_id);
+      return;
+    }
+
+    addMessage("ai", data.reply);
+    input.disabled = false;
+    sendBtn.disabled = false;
+    input.focus();
+
+  } catch (err) {
+    document.getElementById("typing").style.display = "none";
+    addMessage("system", `Error: ${err.message}`);
+    input.disabled = false;
+    sendBtn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  VOICE MODE: WebSocket + Gemini Live
+// ═══════════════════════════════════════════════════════
+function toggleMic() {
+  if (!voiceSessionActive) {
+    startVoiceSession();
+  } else {
+    stopVoiceSession();
+  }
+}
+
+function startVoiceSession() {
+  const micBtn = document.getElementById("mic-btn");
+  const statusEl = document.getElementById("voice-status");
+  
+  ws = new WebSocket(WS_URL);
+  ws.binaryType = "arraybuffer";
+
+  statusEl.textContent = "Connecting...";
+
+  ws.onopen = async () => {
+    voiceSessionActive = true;
+    micBtn.classList.add("listening");
+    micBtn.textContent = "⏹";
+    statusEl.textContent = "🔴 Listening — speak now...";
+    statusEl.classList.add("active");
+    addMessage("system", "Voice session started — AI is listening");
+    await startMicStreaming();
+  };
+
+  ws.onmessage = (event) => {
+    if (typeof event.data === "string") {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "summary") {
+        addMessage("ai", "Thank you! I've collected all the information needed.");
+        const box = document.getElementById("chat-box");
+        const card = document.createElement("div");
+        card.className = "summary-card";
+        card.innerHTML = `
+          <h3>📋 Clinical Summary Generated</h3>
+          <pre>${escapeHtml(msg.text)}</pre>
+        `;
+        box.appendChild(card);
+        box.scrollTop = box.scrollHeight;
+        document.getElementById("voice-status").textContent = "Interview complete";
+        document.getElementById("voice-status").classList.remove("active");
+      } else if (msg.type === "red_flag") {
+        showRedFlag(msg.text.replace("RED_FLAG:", "").trim());
+        document.getElementById("voice-status").textContent = "Urgent — staff notified";
+      }
+    } else {
+      // Raw audio from Gemini — play it
+      playAudioChunk(event.data);
+    }
+  };
+
+  ws.onclose = () => {
+    if (voiceSessionActive) {
+      statusEl.textContent = "Disconnected — tap mic to reconnect";
+      statusEl.classList.remove("active");
+      resetMicUI();
+    }
+  };
+
+  ws.onerror = () => {
+    addMessage("system", "Voice connection error — check the server");
+    statusEl.textContent = "Connection error";
+    statusEl.classList.remove("active");
+    resetMicUI();
+  };
+}
+
+function stopVoiceSession() {
+  voiceSessionActive = false;
+  if (processorNode) processorNode.disconnect();
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+  resetMicUI();
+  document.getElementById("voice-status").textContent = "Tap the mic to start speaking";
+  document.getElementById("voice-status").classList.remove("active");
+  addMessage("system", "Voice session ended");
+}
+
+function resetMicUI() {
+  const micBtn = document.getElementById("mic-btn");
+  micBtn.classList.remove("listening");
+  micBtn.textContent = "🎤";
+  voiceSessionActive = false;
+}
+
+// ── Mic streaming (16kHz PCM) ─────────────────────────
+async function startMicStreaming() {
+  micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  micContext = new AudioContext();
+  const source = micContext.createMediaStreamSource(micStream);
+
+  processorNode = micContext.createScriptProcessor(4096, 1, 1);
+  source.connect(processorNode);
+  processorNode.connect(micContext.destination);
+
+  processorNode.onaudioprocess = (e) => {
+    if (!voiceSessionActive || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const inputSamples = e.inputBuffer.getChannelData(0);
+    const downsampled = downsampleTo16kHz(inputSamples, micContext.sampleRate, 16000);
+    const pcm16 = floatTo16BitPCM(downsampled);
+    ws.send(pcm16);
+  };
+}
+
+function downsampleTo16kHz(buffer, inputRate, outputRate) {
+  if (outputRate === inputRate) return buffer;
+  const ratio = inputRate / outputRate;
+  const newLength = Math.round(buffer.length / ratio);
+  const result = new Float32Array(newLength);
+  for (let i = 0; i < newLength; i++) {
+    result[i] = buffer[Math.floor(i * ratio)];
+  }
+  return result;
+}
+
+function floatTo16BitPCM(floatSamples) {
+  const buffer = new ArrayBuffer(floatSamples.length * 2);
+  const view = new DataView(buffer);
+  for (let i = 0; i < floatSamples.length; i++) {
+    const s = Math.max(-1, Math.min(1, floatSamples[i]));
+    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return buffer;
+}
+
+// ── Playback from Gemini (24kHz PCM) ──────────────────
+function playAudioChunk(arrayBuffer) {
+  if (!playbackContext) {
+    playbackContext = new AudioContext({ sampleRate: 24000 });
+    playbackQueueTime = playbackContext.currentTime;
+  }
+  const int16 = new Int16Array(arrayBuffer);
+  const float32 = new Float32Array(int16.length);
+  for (let i = 0; i < int16.length; i++) {
+    float32[i] = int16[i] / 32768;
+  }
+  const audioBuffer = playbackContext.createBuffer(1, float32.length, 24000);
+  audioBuffer.copyToChannel(float32, 0);
+
+  const source = playbackContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(playbackContext.destination);
+
+  const startTime = Math.max(playbackQueueTime, playbackContext.currentTime);
+  source.start(startTime);
+  playbackQueueTime = startTime + audioBuffer.duration;
+}
+
+// ═══════════════════════════════════════════════════════
+//  SHARED UI: Summary, Red Flag, Escape
+// ═══════════════════════════════════════════════════════
+function showSummary(text, id, json) {
+  const box = document.getElementById("chat-box");
+  
+  const card = document.createElement("div");
+  card.className = "summary-card";
+  card.innerHTML = `
+    <h3>📋 Clinical Summary Generated</h3>
+    <pre>${escapeHtml(text)}</pre>
+    <div class="summary-meta">
+      <span>💾 Saved as ID: ${id}</span>
+      <span>📊 ${turnCount} interview turns</span>
+    </div>
+  `;
+  box.appendChild(card);
+  box.scrollTop = box.scrollHeight;
+
+  document.getElementById("user-input").disabled = true;
+  document.getElementById("send-btn").disabled = true;
+  document.getElementById("user-input").placeholder = "Interview complete";
+}
+
+function showRedFlag(reason) {
+  const box = document.getElementById("chat-box");
+  const card = document.createElement("div");
+  card.className = "redflag-card";
+  card.innerHTML = `<h3>🚨 RED FLAG DETECTED</h3><p>${escapeHtml(reason)}</p><p style="margin-top:8px;font-size:12px;">Staff notified — seek immediate attention.</p>`;
+  box.appendChild(card);
+  box.scrollTop = box.scrollHeight;
+  
+  document.getElementById("user-input").disabled = true;
+  document.getElementById("send-btn").disabled = true;
+}
+
+async function testRetrievalEndpoints(summaryId) {
+  try {
+    const r1 = await fetch(`${API}/summary/${summaryId}`);
+    const d1 = await r1.json();
+    addMessage("system", `✅ GET /summary/${summaryId} — Retrieved OK (patient: ${d1.patient_name})`);
+  } catch (e) {
+    addMessage("system", `❌ GET /summary/${summaryId} — Failed: ${e.message}`);
+  }
+
+  try {
+    const r2 = await fetch(`${API}/summaries`);
+    const d2 = await r2.json();
+    addMessage("system", `✅ GET /summaries — ${d2.length} summary(ies) in database`);
+  } catch (e) {
+    addMessage("system", `❌ GET /summaries — Failed: ${e.message}`);
+  }
+
+  try {
+    const r3 = await fetch(`${API}/summary/99999`);
+    addMessage("system", `✅ GET /summary/99999 — Returns ${r3.status} (expected 404)`);
+  } catch (e) {
+    addMessage("system", `❌ 404 test — Failed: ${e.message}`);
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+
+</body>
+</html>
