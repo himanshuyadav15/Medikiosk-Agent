@@ -1,0 +1,127 @@
+================================================================
+     MEDIKIOSK — TEST ANSWERS CHEAT SHEET
+     Ready-to-copy answers for testing all features
+================================================================
+
+
+────────────────────────────────────────────────────────────────
+ TEST 1: NORMAL INTERVIEW (Full Flow → Summary)
+────────────────────────────────────────────────────────────────
+Refresh page → Consent → Name: "Test Patient" → Start Interview
+
+  AI asks language        →  English
+  AI asks complaint       →  I have been having a headache for the past 2 days
+  AI asks about pain      →  It is a dull throbbing pain on both sides
+  AI asks when started    →  It started 2 days ago after I didn't sleep well
+  AI asks severity        →  Moderate
+  AI asks other symptoms  →  I also feel nauseous and my eyes feel tired
+  AI asks past history    →  I had migraine issues 2 years ago but not anymore
+  AI asks medications     →  I took paracetamol once yesterday
+  AI asks allergies       →  No known allergies
+
+  EXPECTED: Clinical summary card appears with all fields filled.
+
+
+────────────────────────────────────────────────────────────────
+ TEST 2: RED FLAG — CARDIAC EMERGENCY
+────────────────────────────────────────────────────────────────
+Refresh page → Consent → Name: "Emergency Patient" → Start
+
+  AI asks language   →  English
+  AI asks complaint  →  I have sudden severe crushing chest pain radiating to my left arm and I can't breathe
+
+  EXPECTED: RED FLAG DETECTED card appears, interview stops.
+
+
+────────────────────────────────────────────────────────────────
+ TEST 3: RED FLAG — STROKE SYMPTOMS
+────────────────────────────────────────────────────────────────
+Refresh page → Consent → Name: "Stroke Test" → Start
+
+  AI asks language   →  English
+  AI asks complaint  →  I suddenly can't move my right arm and my face feels numb and I can't speak properly
+
+  EXPECTED: RED FLAG detected — stroke symptoms.
+
+
+────────────────────────────────────────────────────────────────
+ TEST 4: RED FLAG — SEVERE BLEEDING
+────────────────────────────────────────────────────────────────
+Refresh page → Consent → Name: "Bleeding Test" → Start
+
+  AI asks language   →  English
+  AI asks complaint  →  I am vomiting blood and feeling very dizzy and weak
+
+  EXPECTED: RED FLAG detected — internal bleeding.
+
+
+────────────────────────────────────────────────────────────────
+ TEST 5: RED FLAG — FAINTING + BLEEDING
+────────────────────────────────────────────────────────────────
+Refresh page → Consent → Name: "Faint Test" → Start
+
+  AI asks language   →  English
+  AI asks complaint  →  I have severe bleeding that won't stop and I feel like I'm going to faint
+
+  EXPECTED: RED FLAG detected.
+
+
+────────────────────────────────────────────────────────────────
+ TEST 6: HINDI LANGUAGE INTERVIEW
+────────────────────────────────────────────────────────────────
+Refresh page → Consent → Name: "Hindi Patient" → Start
+
+  AI asks language        →  Hindi
+  AI asks complaint       →  Mujhe 3 din se bukhar aa raha hai
+  AI follow-ups           →  Haan, sar mein dard bhi hai
+  AI asks more            →  Koi purani bimari nahi hai
+  AI asks medications     →  Koi dawa nahi le raha
+  AI asks allergies       →  Koi allergy nahi hai
+
+  EXPECTED: AI asks questions in Hindi, summary in English.
+
+
+────────────────────────────────────────────────────────────────
+ TEST 7: VOICE MODE (Real-Time)
+────────────────────────────────────────────────────────────────
+Start an interview → Toggle switch to "Voice Mode" → Tap mic
+
+  Say: "I have a fever and body pain since yesterday"
+  Wait for AI to respond in voice
+  Continue speaking naturally
+
+  EXPECTED: Real-time voice conversation with AI.
+
+
+────────────────────────────────────────────────────────────────
+ TEST 8: SWAGGER API DOCS
+────────────────────────────────────────────────────────────────
+Open new tab → http://127.0.0.1:8000/docs
+
+  Click GET /summaries → Try it out → Execute
+  EXPECTED: Shows all saved patient summaries in JSON.
+
+
+================================================================
+ QUICK COPY-PASTE EMERGENCY LINES
+================================================================
+
+I have sudden severe crushing chest pain radiating to my left arm and I can't breathe
+
+I suddenly can't move my right arm and my face feels numb and I can't speak properly
+
+I am vomiting blood and feeling very dizzy and weak
+
+I have severe bleeding that won't stop and I feel like I'm going to faint
+
+
+================================================================
+ HOW TO START THE SERVER
+================================================================
+
+1. Open PowerShell in: D:\Medikiosk Agent\Model testing
+2. Run: .\.venv\Scripts\Activate.ps1; python -m uvicorn main:app --port 8000
+3. Open Chrome: http://127.0.0.1:8000/kiosk
+4. Press F11 for fullscreen
+
+================================================================

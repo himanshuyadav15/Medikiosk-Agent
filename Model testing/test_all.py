@@ -9,7 +9,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='repla
 import requests
 import json
 
-BASE = "http://127.0.0.1:8001"
+BASE = "http://127.0.0.1:8000"
 PASS = 0
 FAIL = 0
 

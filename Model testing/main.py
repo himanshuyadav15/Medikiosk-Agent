@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import os
+import re
 from typing import List, Optional
 from contextlib import asynccontextmanager
 
@@ -16,6 +17,13 @@ from google.genai import types as genai_types
 
 import db
 import summary_generator
+
+
+def strip_think_tags(text: str) -> str:
+    """Remove <think>...</think> blocks that Qwen models prepend to responses."""
+    if not text:
+        return text
+    return re.sub(r"<think>[\s\S]*?</think>\s*", "", text).strip()
 
 VOICE_MAP = {
     "en": "en-IN-NeerjaNeural",
@@ -108,6 +116,53 @@ Rules:
    so that doctors can read it consistently.
 """
 
+# Voice-specific system prompt — reinforces single-question-at-a-time for Gemini Live,
+# which tends to bundle multiple questions in one turn when using the shared prompt.
+VOICE_SYSTEM_PROMPT = """You are MediKiosk's clinical history-taking assistant.
+You interview a patient BEFORE they see a doctor, in a warm, simple, plain-language way.
+This is a VOICE conversation — the patient is SPEAKING to you and LISTENING to your responses.
+
+CRITICAL RULE — ONE QUESTION PER TURN:
+- You must ask EXACTLY ONE question per response. Never two, never three. ONE.
+- After asking your single question, STOP. Wait for the patient to answer.
+- Do NOT combine questions like "How long has it been and is it getting worse?" — that is TWO questions. Pick the more important one and ask only that.
+- If you are tempted to ask a follow-up, WAIT. Ask it in your NEXT turn after the patient replies.
+- The ONLY exception: if two pieces of information are so tightly linked that splitting them sounds unnatural (e.g. "Do you take any medications, and if so, which ones?"), you may combine them — but this should be rare.
+- Keep each question SHORT (under 20 words ideally). The patient is listening, not reading.
+
+IMPORTANT — Language Selection (FIRST STEP):
+- Your VERY FIRST message to the patient must ask them which language they prefer to communicate in.
+- Offer common options like English, Hindi, Tamil, Telugu, Kannada, Malayalam, Marathi, Bengali, Gujarati, etc.
+- Once the patient chooses a language, conduct the ENTIRE remaining interview in that language.
+- If the patient picks a language you can handle, switch to it immediately and greet them in it.
+- If the patient's choice is unclear, default to English.
+
+Required fields you must collect before finishing:
+- chief complaint (main problem)
+- onset (when it started)
+- duration
+- severity (mild / moderate / severe)
+- associated symptoms
+- past medical history
+- current medications
+- known allergies
+
+Rules:
+1. Ask ONE question at a time. This is the most important rule. Never bundle questions.
+2. Use the patient's previous answers to decide the most relevant next question
+   (e.g. if they say "chest pain", ask about radiation, breathlessness, timing next).
+3. If the patient mentions a possible emergency symptom (e.g. chest pain + breathlessness,
+   severe bleeding, sudden weakness/numbness, fainting), respond with exactly:
+   "RED_FLAG: <short reason>" and stop asking further questions.
+4. Once all required fields above are collected, respond with exactly this format:
+   "SUMMARY_READY:" followed by a JSON object with keys:
+   chief_complaint, onset, duration, severity, associated_symptoms,
+   past_medical_history, medications, allergies.
+5. Never diagnose or suggest a condition. You only collect history.
+6. Always generate the SUMMARY_READY JSON in English, regardless of the interview language,
+   so that doctors can read it consistently.
+"""
+
 
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
@@ -178,12 +233,12 @@ async def interview(req: InterviewRequest, patient_name: str = "Unknown"):
 
     try:
         completion = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="qwen/qwen3.8-27b",
             messages=messages,
             temperature=0.3,
             max_tokens=500,
         )
-        reply = completion.choices[0].message.content
+        reply = strip_think_tags(completion.choices[0].message.content)
     except Exception as e:
         # TEMPORARY: surface the real error so we can debug it directly.
         reply = f"DEBUG_ERROR: {type(e).__name__}: {e}"
@@ -281,12 +336,12 @@ def force_generate_summary(req: GenerateSummaryRequest):
 
     try:
         completion = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="qwen/qwen3.8-27b",
             messages=messages,
             temperature=0.3,
             max_tokens=800,
         )
-        reply = completion.choices[0].message.content
+        reply = strip_think_tags(completion.choices[0].message.content)
     except Exception as e:
         reply = f"DEBUG_ERROR: {type(e).__name__}: {e}"
 
@@ -391,12 +446,12 @@ async def voice_interview(
 
     try:
         completion = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="qwen/qwen3.8-27b",
             messages=messages,
             temperature=0.3,
             max_tokens=500,
         )
-        reply = completion.choices[0].message.content
+        reply = strip_think_tags(completion.choices[0].message.content)
     except Exception as e:
         reply = f"DEBUG_ERROR: {type(e).__name__}: {e}"
 
@@ -492,7 +547,7 @@ async def gemini_live_interview(websocket: WebSocket):
     # rather than a plain dict — safer against SDK version differences.
     live_config = genai_types.LiveConnectConfig(
         response_modalities=["AUDIO"],
-        system_instruction=SYSTEM_PROMPT,
+        system_instruction=VOICE_SYSTEM_PROMPT,
         output_audio_transcription=genai_types.AudioTranscriptionConfig(),
         speech_config=genai_types.SpeechConfig(
             voice_config=genai_types.VoiceConfig(
@@ -542,6 +597,10 @@ async def gemini_live_interview(websocket: WebSocket):
         # this print is where you'll see the real error to fix it.
         print(f"Gemini Live error: {type(e).__name__}: {e}")
         try:
+            await websocket.send_json({
+                "type": "error",
+                "message": f"Gemini Live error: {e}. Tip: The Kiosk web app now uses the robust Groq Whisper + Edge-TTS voice engine."
+            })
             await websocket.close()
         except Exception:
             pass
